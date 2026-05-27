@@ -1,10 +1,41 @@
 import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Alert, Platform, StyleSheet } from "react-native";
+import {
+  View, Text, TouchableOpacity, FlatList,
+  Alert, Platform, StyleSheet,
+} from "react-native";
 import { router } from "expo-router";
 import { getStoredUser, clearSession } from "../../lib/storage";
 import { UserData } from "../../types/user";
 
 declare const confirm: (msg: string) => boolean;
+
+interface ChatItem {
+  id: string;
+  name: string;
+  avatar: string;
+  lastMessage: string;
+  time: string;
+  unread: number;
+}
+
+const CHATS: ChatItem[] = [
+  {
+    id: "hub-ai",
+    name: "HUB AI Assistant",
+    avatar: "H",
+    lastMessage: "¡Hola! Soy el asistente virtual de HUB AI...",
+    time: "Ahora",
+    unread: 1,
+  },
+  {
+    id: "sistema",
+    name: "Notificaciones",
+    avatar: "N",
+    lastMessage: "Bienvenido a HUB AI Assistant",
+    time: "Ayer",
+    unread: 0,
+  },
+];
 
 export default function HomeScreen() {
   const [user, setUser] = useState<UserData | null>(null);
@@ -20,70 +51,62 @@ export default function HomeScreen() {
 
   const handleLogout = () => {
     if (Platform.OS === "web") {
-      if (confirm("¿Estás seguro de cerrar sesión?")) {
-        doLogout();
-      }
+      if (confirm("¿Estás seguro de cerrar sesión?")) doLogout();
     } else {
       Alert.alert("Cerrar sesión", "¿Estás seguro de cerrar sesión?", [
         { text: "Cancelar", style: "cancel" },
-        {
-          text: "Cerrar sesión",
-          style: "destructive",
-          onPress: doLogout,
-        },
+        { text: "Cerrar sesión", style: "destructive", onPress: doLogout },
       ]);
     }
   };
 
-  return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.headerGreeting}>Bienvenido,</Text>
-        <Text style={styles.headerName}>
-          {user?.fullName ?? "Usuario"}
-        </Text>
+  const renderChat = ({ item }: { item: ChatItem }) => (
+    <TouchableOpacity
+      style={styles.chatItem}
+      activeOpacity={0.6}
+      onPress={() => router.push(`/(tabs)/chat?id=${item.id}&name=${encodeURIComponent(item.name)}`)}
+    >
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>{item.avatar}</Text>
       </View>
-
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <View style={styles.cardIcon}>
-            <Text style={styles.cardIconText}>H</Text>
-          </View>
-          <Text style={styles.cardTitle}>HUB AI Assistant</Text>
-          <Text style={styles.cardBody}>
-            Base inicial de{" "}
-            <Text style={styles.cardBodyBold}>HUB AI Assistant</Text>
-            . Próximamente: chatbot empresarial inteligente conectado a un HUB
-            centralizado.
-          </Text>
+      <View style={styles.chatInfo}>
+        <View style={styles.chatTop}>
+          <Text style={styles.chatName}>{item.name}</Text>
+          <Text style={styles.chatTime}>{item.time}</Text>
         </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardSectionTitle}>Información de la cuenta</Text>
-          {user && (
-            <View>
-              <InfoRow label="Documento" value={user.document} />
-              <InfoRow label="Correo" value={user.email} />
-              <InfoRow label="Teléfono" value={user.phone} />
+        <View style={styles.chatBottom}>
+          <Text style={styles.chatLastMsg} numberOfLines={1}>
+            {item.lastMessage}
+          </Text>
+          {item.unread > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{item.unread}</Text>
             </View>
           )}
         </View>
-
-        <View style={{ flex: 1 }} />
-
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-}
 
-function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>HUB AI</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.userName}>{user?.fullName ?? "Usuario"}</Text>
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.logoutText}>Salir</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <FlatList
+        data={CHATS}
+        keyExtractor={(item) => item.id}
+        renderItem={renderChat}
+        contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+      />
     </View>
   );
 }
@@ -91,111 +114,105 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "white",
   },
   header: {
     backgroundColor: "#2563EB",
-    paddingHorizontal: 24,
-    paddingTop: 64,
-    paddingBottom: 32,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#93C5FD",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  headerGreeting: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "500",
-    opacity: 0.8,
-  },
-  headerName: {
-    color: "white",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 4,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-  },
-  card: {
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: "#CBD5E1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 24,
-  },
-  cardIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: "#DBEAFE",
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    paddingTop: 56,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
   },
-  cardIconText: {
-    color: "#2563EB",
+  headerTitle: {
+    color: "white",
     fontSize: 20,
     fontWeight: "bold",
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1E293B",
-    marginBottom: 8,
-  },
-  cardBody: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  cardBodyBold: {
-    fontWeight: "600",
-    color: "#334155",
-  },
-  cardSectionTitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#94A3B8",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  infoRow: {
+  headerRight: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  infoLabel: {
-    color: "#64748B",
-    fontSize: 14,
-  },
-  infoValue: {
-    color: "#1E293B",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  logoutButton: {
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 12,
-    paddingVertical: 14,
     alignItems: "center",
-    marginBottom: 32,
+    gap: 12,
+  },
+  userName: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
   },
   logoutText: {
-    color: "#EF4444",
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  list: {
+    paddingTop: 4,
+  },
+  chatItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    backgroundColor: "#2563EB",
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  avatarText: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  chatInfo: {
+    flex: 1,
+  },
+  chatTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  chatName: {
     fontSize: 16,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  chatTime: {
+    fontSize: 12,
+    color: "#94A3B8",
+  },
+  chatBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  chatLastMsg: {
+    fontSize: 14,
+    color: "#64748B",
+    flex: 1,
+    marginRight: 8,
+  },
+  badge: {
+    backgroundColor: "#2563EB",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#F1F5F9",
+    marginLeft: 82,
   },
 });
